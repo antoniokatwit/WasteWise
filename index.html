@@ -49,12 +49,10 @@
 
   <div class="game-body" id="gameBody">
 
-    <!-- Item card — clicking it triggers the scatter animation -->
     <div class="item-card" id="itemCard">
       <div class="item-monogram" id="itemMonogram"></div>
       <div class="item-name"     id="itemName"></div>
       <div class="item-desc"     id="itemDesc"></div>
-      <!-- pulsing hint shown only when the card needs to be tapped -->
       <div class="tap-hint hidden" id="tapHint">Tap to take apart</div>
     </div>
 
@@ -116,13 +114,10 @@
   <button class="play-again-btn" onclick="startGame()">Play Again</button>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════
-     GAME LOGIC
-     ══════════════════════════════════════════════════════════ -->
 <script>
 "use strict";
 
-/* ── State ─────────────────────────────────────────────────── */
+/* ── State ───────────────────────────────────────────────────── */
 let allItems       = [];
 let gameItems      = [];
 let currentIdx     = 0;
@@ -132,25 +127,24 @@ let score          = 0;
 let totalParts     = 0;
 let correctParts   = 0;
 let catStats       = newStats();
-let splitting      = false;   // guard: ignore taps during animation
+let splitting      = false;
 
 function newStats() {
-  return { recycle: { c:0, t:0 }, trash: { c:0, t:0 }, compost: { c:0, t:0 } };
+  return { recycle:{c:0,t:0}, trash:{c:0,t:0}, compost:{c:0,t:0} };
 }
-
 function $(id) { return document.getElementById(id); }
 
-/* ── Data fetch ─────────────────────────────────────────────── */
+/* ── Data fetch ──────────────────────────────────────────────── */
 (async function bootstrap() {
   const msg = $("loadingMsg");
   const btn = $("startBtn");
   try {
     const res = await fetch("/api/items");
     if (!res.ok) throw new Error("HTTP " + res.status);
-    allItems         = await res.json();
-    btn.textContent  = "Let's Sort";
-    btn.disabled     = false;
-    msg.textContent  = "";
+    allItems        = await res.json();
+    btn.textContent = "Let's Sort";
+    btn.disabled    = false;
+    msg.textContent = "";
   } catch (err) {
     msg.textContent = "Could not load items — is the server running?";
     console.error(err);
@@ -196,14 +190,18 @@ function loadItem() {
   $("progressLabel").textContent = (currentIdx + 1) + " / 10";
   $("scoreNum").textContent      = score;
 
-  /* reset card appearance */
+  /* ── FIX: fully reset the card every time ──
+     Must remove "hidden" (added at end of triggerSplit),
+     "dissolving" (collapse animation class), "tappable",
+     and clear the inline height that was locked before collapse. */
   const card = $("itemCard");
-  card.style.height   = "";        // clear any explicit height set during collapse
-  card.style.opacity  = "";
-  card.classList.remove("dissolving", "tappable");
-  card.onclick = null;
+  card.classList.remove("hidden", "dissolving", "tappable");
+  card.style.height  = "";
+  card.style.opacity = "";
+  card.style.padding = "";
+  card.onclick       = null;
 
-  /* fill card content */
+  /* fill card */
   $("itemMonogram").textContent = item.name.charAt(0).toUpperCase();
   $("itemName").textContent     = item.name;
   $("itemDesc").textContent     = item.description;
@@ -218,7 +216,7 @@ function loadItem() {
     hint.classList.add("hidden");
   }
 
-  /* hide components / feedback / next */
+  /* reset everything else */
   $("componentsZone").classList.add("hidden");
   $("componentsList").innerHTML = "";
   $("feedbackBanner").className = "feedback-banner";
@@ -234,80 +232,56 @@ function loadItem() {
   }
 }
 
-/* ══════════════════════════════════════════════════════════════
-   SCATTER / SPLIT ANIMATION
-   ══════════════════════════════════════════════════════════════
-
-   When the user taps the item card:
-   1. N text fragments (one per component) are spawned over the
-      item-name element, all showing the item name text.
-   2. Each fragment flies outward in a fan spread above the card,
-      shrinking and fading as it goes.
-   3. The card collapses to zero height.
-   4. Component chips slide up into view with a staggered delay.
-
-   ══════════════════════════════════════════════════════════════ */
+/* ── Scatter / split animation ───────────────────────────────── */
 function triggerSplit() {
-  if (splitting) return;   // prevent double-fire
+  if (splitting) return;
   splitting = true;
 
-  const item    = gameItems[currentIdx];
-  const card    = $("itemCard");
-  const nameEl  = $("itemName");
-  const n       = item.components.length;
+  const item   = gameItems[currentIdx];
+  const card   = $("itemCard");
+  const nameEl = $("itemName");
+  const n      = item.components.length;
 
-  /* measure the centre of the item name in viewport coords */
+  /* measure origin — centre of the item name text */
   const r  = nameEl.getBoundingClientRect();
   const cx = r.left + r.width  / 2;
   const cy = r.top  + r.height / 2;
 
-  /* ── 1. Spawn scatter fragments ── */
-  /*
-     Fan spread: distribute N fragments across an arc from
-     -150° to -30° (upper half, starting from upper-left to upper-right).
-     -90° is straight up. Randomise distance slightly per fragment.
-  */
+  /* spawn one fragment per component, fan-spread above the card */
   const arcStart = -150;
   const arcEnd   = -30;
 
   for (let i = 0; i < n; i++) {
-    const degFraction = n === 1 ? 0.5 : i / (n - 1);
-    const deg  = arcStart + degFraction * (arcEnd - arcStart);
-    const rad  = deg * (Math.PI / 180);
-    const dist = 90 + i * 18;           // stagger distance so they don't all land at same point
-
-    const tx = Math.cos(rad) * dist;   // viewport-relative displacement
-    const ty = Math.sin(rad) * dist;
+    const fraction = n === 1 ? 0.5 : i / (n - 1);
+    const deg = arcStart + fraction * (arcEnd - arcStart);
+    const rad = deg * (Math.PI / 180);
+    const dist = 90 + i * 18;
 
     const frag = document.createElement("span");
-    frag.className   = "scatter-frag";
-    frag.textContent = item.name;
-    /* start exactly centred over the item name */
-    frag.style.left  = cx + "px";
-    frag.style.top   = cy + "px";
-    frag.style.fontSize = Math.max(13, 20 - n * 1.5) + "px"; // smaller text for more fragments
+    frag.className        = "scatter-frag";
+    frag.textContent      = item.name;
+    frag.style.left       = cx + "px";
+    frag.style.top        = cy + "px";
+    frag.style.fontSize   = Math.max(13, 20 - n * 1.5) + "px";
     document.body.appendChild(frag);
 
-    /* kick off the fly-out on the next paint so the initial position is rendered first */
+    /* force a paint at the start position, then animate away */
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
+        const tx = Math.cos(rad) * dist;
+        const ty = Math.sin(rad) * dist;
         frag.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(0.28) rotate(${(i - (n-1)/2) * 12}deg)`;
         frag.style.opacity   = "0";
         frag.style.filter    = "blur(3px)";
       });
     });
 
-    /* clean up after the CSS transition finishes */
     setTimeout(() => frag.remove(), 700);
   }
 
-  /* ── 2. Collapse the card ── */
-  /*
-     Lock the card's current height explicitly so the CSS transition
-     has a concrete start value, then set height → 0.
-  */
-  card.style.height  = card.offsetHeight + "px";
-  card.onclick       = null;   // prevent re-tap during animation
+  /* lock current height so the CSS transition has a start value, then collapse */
+  card.style.height = card.offsetHeight + "px";
+  card.onclick      = null;
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
@@ -315,26 +289,21 @@ function triggerSplit() {
     });
   });
 
-  /* ── 3. Reveal components after the card has mostly collapsed ── */
+  /* after card collapses, hide it completely and show chips */
   setTimeout(() => {
-    card.classList.add("hidden");   // fully remove from layout
+    card.classList.add("hidden");
     showComponents(item);
     setBinsActive(true);
-    /* scroll the component zone into view smoothly */
     setTimeout(() => {
       $("componentsZone").scrollIntoView({ behavior: "smooth", block: "nearest" });
     }, 80);
   }, 360);
 }
 
-/* ── Render component chips ─────────────────────────────────── */
+/* ── Render component chips ──────────────────────────────────── */
 function showComponents(item) {
   $("zoneLabel").textContent = item.components.length > 1 ? "Sort each piece" : "Sort this item";
 
-  /*
-     Each chip gets a CSS custom property --i for its staggered
-     entrance animation delay (defined in style.css as chipArrive).
-  */
   $("componentsList").innerHTML = item.components.map((c, i) => `
     <div class="component-chip"
          id="chip-${c.id}"
@@ -359,7 +328,6 @@ function selectComponent(id) {
   if (selectedCompId !== null && selectedCompId !== id) {
     $("chip-" + selectedCompId)?.classList.remove("selected");
   }
-
   selectedCompId = id;
   $("chip-" + id).classList.add("selected");
 
@@ -367,7 +335,7 @@ function selectComponent(id) {
   $("binsHint").textContent = `Now tap the bin for \u201c${comp.name}\u201d`;
 }
 
-/* ── Sort selected chip into a bin ──────────────────────────── */
+/* ── Sort selected chip ──────────────────────────────────────── */
 function sortSelected(binChoice) {
   if (selectedCompId === null) {
     document.querySelectorAll(".bin-btn").forEach(b => {
@@ -390,7 +358,7 @@ function sortSelected(binChoice) {
   chip.classList.add("sorted-" + binChoice);
   chip.onclick = null;
 
-  const labels = { recycle: "Recycle", trash: "Trash", compost: "Compost" };
+  const labels = { recycle:"Recycle", trash:"Trash", compost:"Compost" };
   $("badge-" + selectedCompId).textContent = labels[binChoice];
 
   totalParts++;
@@ -414,7 +382,6 @@ function sortSelected(binChoice) {
     setTimeout(() => binEl.classList.remove("pulse"), 280);
   }
 
-  /* check all sorted */
   if (item.components.every(c => sortedMap[c.id] !== undefined)) {
     setBinsActive(false);
     showItemFeedback(item);
@@ -425,13 +392,15 @@ function sortSelected(binChoice) {
 function showItemFeedback(item) {
   const wrong  = item.components.filter(c => sortedMap[c.id] !== c.bin);
   const banner = $("feedbackBanner");
-  const labels = { recycle: "Recycling", trash: "Trash", compost: "Compost" };
+  const labels = { recycle:"Recycling", trash:"Trash", compost:"Compost" };
 
   if (wrong.length === 0) {
     banner.className = "feedback-banner correct show";
     banner.innerHTML = "<strong>All correct!</strong> Every piece went to the right bin.";
   } else {
-    const fixes = wrong.map(c => `<strong>${c.name}</strong> &rarr; ${labels[c.bin]}`).join(" &middot; ");
+    const fixes = wrong.map(c =>
+      `<strong>${c.name}</strong> &rarr; ${labels[c.bin]}`
+    ).join(" &middot; ");
     banner.className = "feedback-banner wrong show";
     banner.innerHTML = `<strong>Almost!</strong> ${fixes}`;
   }
@@ -440,7 +409,7 @@ function showItemFeedback(item) {
   nb.textContent = currentIdx >= 9 ? "See My Results" : "Next Item";
   nb.classList.add("show");
 
-  setTimeout(() => banner.scrollIntoView({ behavior: "smooth", block: "nearest" }), 100);
+  setTimeout(() => banner.scrollIntoView({ behavior:"smooth", block:"nearest" }), 100);
 }
 
 /* ── Next item ───────────────────────────────────────────────── */
@@ -455,12 +424,12 @@ function nextItem() {
 function showResults() {
   $("progressFill").style.width = "100%";
 
-  const pct  = Math.round((correctParts / Math.max(totalParts, 1)) * 100);
+  const pct   = Math.round((correctParts / Math.max(totalParts, 1)) * 100);
   const tiers = [
-    { min:100, grade:"Perfect",    title:"Flawless Sorter!"          },
-    { min: 80, grade:"Excellent",  title:"Great Job!"                },
-    { min: 60, grade:"Good",       title:"Getting There!"            },
-    { min: 40, grade:"Fair",       title:"Keep Practicing!"          },
+    { min:100, grade:"Perfect",    title:"Flawless Sorter!"           },
+    { min: 80, grade:"Excellent",  title:"Great Job!"                 },
+    { min: 60, grade:"Good",       title:"Getting There!"             },
+    { min: 40, grade:"Fair",       title:"Keep Practicing!"           },
     { min:  0, grade:"Keep At It", title:"Everyone Starts Somewhere." },
   ];
   const tier = tiers.find(t => pct >= t.min);
