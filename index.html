@@ -4,421 +4,479 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#1a3d2b">
-  <title>WasteWise — Sort It Right</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <meta name="theme-color" content="#09130d">
+  <title>WasteWise</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,800;1,9..144,400&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 
-  <!-- ══════════════════════════════════════════
-       START SCREEN
-  ══════════════════════════════════════════ -->
-  <div id="screen-start" class="screen active">
-    <div class="logo">Waste<span>Wise</span></div>
-    <p class="tagline">Take it apart. Sort it right.</p>
+<!-- ══════════════════════════════════════════════════════════
+     START SCREEN
+     ══════════════════════════════════════════════════════════ -->
+<div id="screen-start" class="screen active">
+  <div class="logo">Waste<span class="logo-accent">Wise</span></div>
+  <p class="tagline">Tap the item. Watch it split. Sort the pieces.</p>
 
-    <div class="bin-preview">
-      <div class="bp recycle">
-        <div class="bp-label">Recycle</div>
-      </div>
-      <div class="bp trash">
-        <div class="bp-label">Trash</div>
-      </div>
-      <div class="bp compost">
-        <div class="bp-label">Compost</div>
-      </div>
-    </div>
-
-    <button class="start-btn" id="startBtn">Let's Sort! →</button>
-    <p class="start-note" id="startNote">Loading items…</p>
+  <div class="bin-legend">
+    <div class="legend-item recycle"><div class="legend-dot"></div>Recycle</div>
+    <div class="legend-item trash"  ><div class="legend-dot"></div>Trash</div>
+    <div class="legend-item compost"><div class="legend-dot"></div>Compost</div>
   </div>
 
-  <!-- ══════════════════════════════════════════
-       GAME SCREEN
-  ══════════════════════════════════════════ -->
-  <div id="screen-game" class="screen">
-    <!-- Top bar -->
-    <div class="topbar">
-      <div class="topbar-logo">Waste<span>Wise</span></div>
-      <div class="topbar-right">
-        <div class="topbar-progress-label" id="progressLabel">1 / 10</div>
-        <div class="topbar-score">Score <span id="scoreNum">0</span></div>
-      </div>
-    </div>
-    <div class="progress-wrap">
-      <div class="progress-fill" id="progressFill" style="width:10%"></div>
-    </div>
+  <button class="start-btn" id="startBtn" onclick="startGame()" disabled>Loading...</button>
+  <p class="start-note">10 items &nbsp;&middot;&nbsp; tap to split &nbsp;&middot;&nbsp; sort each piece</p>
+  <p class="loading-msg" id="loadingMsg"></p>
+</div>
 
-    <!-- Scrollable game body -->
-    <div class="game-body" id="gameBody">
+<!-- ══════════════════════════════════════════════════════════
+     GAME SCREEN
+     ══════════════════════════════════════════════════════════ -->
+<div id="screen-game" class="screen">
 
-      <!-- Item card -->
-      <div class="item-card">
-        <div class="item-emoji" id="itemEmoji"></div>
-        <div class="item-name"  id="itemName"></div>
-        <div class="item-desc"  id="itemDesc"></div>
-        <button class="disassemble-btn hidden" id="disassembleBtn"></button>
-      </div>
-
-      <!-- Components to sort -->
-      <div class="components-zone hidden" id="componentsZone">
-        <div class="zone-label" id="zoneLabel">Sort each piece</div>
-        <div id="componentsList"></div>
-      </div>
-
-      <!-- Feedback -->
-      <div class="feedback-banner" id="feedbackBanner"></div>
-      <button class="next-btn" id="nextBtn"></button>
-    </div>
-
-    <!-- Bin buttons (sticky bottom) -->
-    <div class="bins-area">
-      <div class="bins-hint" id="binsHint">Select a piece above, then tap a bin</div>
-      <div class="bins-row">
-        <button class="bin-btn recycle" data-bin="recycle">
-          <span class="bin-name">Recycle</span>
-        </button>
-        <button class="bin-btn trash" data-bin="trash">
-          <span class="bin-name">Trash</span>
-        </button>
-        <button class="bin-btn compost" data-bin="compost">
-          <span class="bin-name">Compost</span>
-        </button>
-      </div>
+  <div class="topbar">
+    <div class="topbar-logo">Waste<span class="logo-accent">Wise</span></div>
+    <div class="topbar-right">
+      <span class="topbar-progress-label" id="progressLabel">1 / 10</span>
+      <div class="topbar-score">Score&nbsp;<span id="scoreNum">0</span></div>
     </div>
   </div>
 
-  <!-- ══════════════════════════════════════════
-       RESULTS SCREEN
-  ══════════════════════════════════════════ -->
-  <div id="screen-results" class="screen">
-    <div class="results-icon"  id="resultsIcon"></div>
-    <div class="results-title" id="resultsTitle"></div>
-    <div class="results-score" id="resultsScore"></div>
-    <div class="results-of"    id="resultsOf"></div>
-
-    <div class="results-breakdown">
-      <div class="breakdown-title">Breakdown by bin</div>
-      <div class="breakdown-row">
-        <span class="bl">Recycle</span>
-        <span class="br" id="brRecycle">—</span>
-      </div>
-      <div class="breakdown-row">
-        <span class="bl">Trash</span>
-        <span class="br" id="brTrash">—</span>
-      </div>
-      <div class="breakdown-row">
-        <span class="bl">Compost</span>
-        <span class="br" id="brCompost">—</span>
-      </div>
-    </div>
-
-    <button class="play-again-btn" id="playAgainBtn">Play Again</button>
+  <div class="progress-wrap">
+    <div class="progress-fill" id="progressFill" style="width: 10%"></div>
   </div>
 
-  <!-- ══════════════════════════════════════════
-       ERROR TOAST
-  ══════════════════════════════════════════ -->
-  <div class="toast hidden" id="toast"></div>
+  <div class="game-body" id="gameBody">
 
-  <script>
-  // ══════════════════════════════════════════════════════
-  // STATE
-  // ══════════════════════════════════════════════════════
-  let allItems       = [];   // full item list from /api/items
-  let gameItems      = [];   // 10 shuffled items for this round
-  let currentIdx     = 0;
-  let selectedCompId = null; // DB id of selected component chip
-  let sortedMap      = {};   // { component_id: 'recycle'|'trash'|'compost' }
-  let score          = 0;
-  let totalParts     = 0;
-  let correctParts   = 0;
-  let catStats       = { recycle:{c:0,t:0}, trash:{c:0,t:0}, compost:{c:0,t:0} };
+    <!-- Item card — clicking it triggers the scatter animation -->
+    <div class="item-card" id="itemCard">
+      <div class="item-monogram" id="itemMonogram"></div>
+      <div class="item-name"     id="itemName"></div>
+      <div class="item-desc"     id="itemDesc"></div>
+      <!-- pulsing hint shown only when the card needs to be tapped -->
+      <div class="tap-hint hidden" id="tapHint">Tap to take apart</div>
+    </div>
 
-  // ══════════════════════════════════════════════════════
-  // BOOT — fetch items, then wire up UI
-  // ══════════════════════════════════════════════════════
-  document.addEventListener("DOMContentLoaded", async () => {
-    try {
-      const res  = await fetch("/api/items");
-      allItems   = await res.json();
-      document.getElementById("startNote").textContent =
-        allItems.length + " items · disassemble · sort each piece";
-    } catch (e) {
-      showToast("⚠️ Could not load items. Is Flask running?");
-    }
+    <div class="components-zone hidden" id="componentsZone">
+      <div class="zone-label" id="zoneLabel">Sort each piece</div>
+      <div id="componentsList"></div>
+    </div>
 
-    document.getElementById("startBtn").addEventListener("click", startGame);
-    document.getElementById("playAgainBtn").addEventListener("click", startGame);
-    document.getElementById("disassembleBtn").addEventListener("click", doDisassemble);
-    document.getElementById("nextBtn").addEventListener("click", nextItem);
-    document.querySelectorAll(".bin-btn").forEach(btn =>
-      btn.addEventListener("click", () => sortSelected(btn.dataset.bin))
-    );
-  });
+    <div class="feedback-banner" id="feedbackBanner"></div>
+    <button class="next-btn" id="nextBtn" onclick="nextItem()"></button>
 
-  // ══════════════════════════════════════════════════════
-  // GAME FLOW
-  // ══════════════════════════════════════════════════════
-  function shuffle(arr) { return [...arr].sort(() => Math.random() - 0.5); }
+  </div>
 
-  function startGame() {
-    gameItems    = shuffle(allItems).slice(0, 10);
-    currentIdx   = 0;
-    score        = 0;
-    totalParts   = 0;
-    correctParts = 0;
-    catStats     = { recycle:{c:0,t:0}, trash:{c:0,t:0}, compost:{c:0,t:0} };
-    showScreen("game");
-    loadItem();
+  <div class="bins-area">
+    <div class="bins-hint" id="binsHint">Select a piece above, then tap a bin</div>
+    <div class="bins-row">
+      <button class="bin-btn recycle" onclick="sortSelected('recycle')">
+        <div class="bin-icon"></div>
+        <span class="bin-label">Recycle</span>
+      </button>
+      <button class="bin-btn trash" onclick="sortSelected('trash')">
+        <div class="bin-icon"></div>
+        <span class="bin-label">Trash</span>
+      </button>
+      <button class="bin-btn compost" onclick="sortSelected('compost')">
+        <div class="bin-icon"></div>
+        <span class="bin-label">Compost</span>
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     RESULTS SCREEN
+     ══════════════════════════════════════════════════════════ -->
+<div id="screen-results" class="screen">
+  <div class="results-grade"  id="resultsGrade"></div>
+  <div class="results-title"  id="resultsTitle"></div>
+  <div class="results-score"  id="resultsScore"></div>
+  <div class="results-of"     id="resultsOf"></div>
+
+  <div class="results-breakdown">
+    <div class="breakdown-title">Breakdown by bin</div>
+    <div class="breakdown-row">
+      <span class="breakdown-label"><span class="breakdown-dot recycle"></span>Recycle</span>
+      <span class="breakdown-value" id="brRecycle">—</span>
+    </div>
+    <div class="breakdown-row">
+      <span class="breakdown-label"><span class="breakdown-dot trash"></span>Trash</span>
+      <span class="breakdown-value" id="brTrash">—</span>
+    </div>
+    <div class="breakdown-row">
+      <span class="breakdown-label"><span class="breakdown-dot compost"></span>Compost</span>
+      <span class="breakdown-value" id="brCompost">—</span>
+    </div>
+  </div>
+
+  <button class="play-again-btn" onclick="startGame()">Play Again</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     GAME LOGIC
+     ══════════════════════════════════════════════════════════ -->
+<script>
+"use strict";
+
+/* ── State ─────────────────────────────────────────────────── */
+let allItems       = [];
+let gameItems      = [];
+let currentIdx     = 0;
+let selectedCompId = null;
+let sortedMap      = {};
+let score          = 0;
+let totalParts     = 0;
+let correctParts   = 0;
+let catStats       = newStats();
+let splitting      = false;   // guard: ignore taps during animation
+
+function newStats() {
+  return { recycle: { c:0, t:0 }, trash: { c:0, t:0 }, compost: { c:0, t:0 } };
+}
+
+function $(id) { return document.getElementById(id); }
+
+/* ── Data fetch ─────────────────────────────────────────────── */
+(async function bootstrap() {
+  const msg = $("loadingMsg");
+  const btn = $("startBtn");
+  try {
+    const res = await fetch("/api/items");
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    allItems         = await res.json();
+    btn.textContent  = "Let's Sort";
+    btn.disabled     = false;
+    msg.textContent  = "";
+  } catch (err) {
+    msg.textContent = "Could not load items — is the server running?";
+    console.error(err);
+  }
+})();
+
+/* ── Helpers ─────────────────────────────────────────────────── */
+function shuffle(arr) { return [...arr].sort(() => Math.random() - 0.5); }
+
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  $("screen-" + id).classList.add("active");
+  window.scrollTo(0, 0);
+}
+
+function setBinsActive(on) {
+  document.querySelectorAll(".bin-btn").forEach(b => b.classList.toggle("inactive", !on));
+}
+
+/* ── Start ───────────────────────────────────────────────────── */
+function startGame() {
+  if (!allItems.length) return;
+  gameItems    = shuffle(allItems).slice(0, 10);
+  currentIdx   = 0;
+  score        = 0;
+  totalParts   = 0;
+  correctParts = 0;
+  catStats     = newStats();
+  showScreen("game");
+  loadItem();
+}
+
+/* ── Load one item ───────────────────────────────────────────── */
+function loadItem() {
+  const item = gameItems[currentIdx];
+  selectedCompId = null;
+  sortedMap      = {};
+  splitting      = false;
+
+  /* progress */
+  const pct = Math.round((currentIdx / 10) * 100) + 10;
+  $("progressFill").style.width  = pct + "%";
+  $("progressLabel").textContent = (currentIdx + 1) + " / 10";
+  $("scoreNum").textContent      = score;
+
+  /* reset card appearance */
+  const card = $("itemCard");
+  card.style.height   = "";        // clear any explicit height set during collapse
+  card.style.opacity  = "";
+  card.classList.remove("dissolving", "tappable");
+  card.onclick = null;
+
+  /* fill card content */
+  $("itemMonogram").textContent = item.name.charAt(0).toUpperCase();
+  $("itemName").textContent     = item.name;
+  $("itemDesc").textContent     = item.description;
+
+  /* tap hint */
+  const hint = $("tapHint");
+  if (item.needs_disassembly) {
+    hint.classList.remove("hidden");
+    card.classList.add("tappable");
+    card.onclick = triggerSplit;
+  } else {
+    hint.classList.add("hidden");
   }
 
-  function loadItem() {
-    const item       = gameItems[currentIdx];
-    selectedCompId   = null;
-    sortedMap        = {};
+  /* hide components / feedback / next */
+  $("componentsZone").classList.add("hidden");
+  $("componentsList").innerHTML = "";
+  $("feedbackBanner").className = "feedback-banner";
+  $("nextBtn").classList.remove("show");
+  $("binsHint").textContent = "Select a piece above, then tap a bin";
 
-    // progress bar
-    const pct = Math.round((currentIdx / 10) * 100) + 10;
-    document.getElementById("progressFill").style.width = pct + "%";
-    document.getElementById("progressLabel").textContent = (currentIdx + 1) + " / 10";
-    document.getElementById("scoreNum").textContent = score;
+  setBinsActive(false);
+  $("gameBody").scrollTop = 0;
 
-    // item card
-    document.getElementById("itemEmoji").textContent = item.emoji;
-    document.getElementById("itemName").textContent  = item.name;
-    document.getElementById("itemDesc").textContent  = item.description;
-
-    const btn = document.getElementById("disassembleBtn");
-    if (item.disassemble) {
-      btn.classList.remove("hidden");
-      btn.textContent = item.btn_label;
-    } else {
-      btn.classList.add("hidden");
-    }
-
-    // reset UI
-    document.getElementById("componentsZone").classList.add("hidden");
-    document.getElementById("componentsList").innerHTML = "";
-    hideFeedback();
-    document.getElementById("nextBtn").classList.remove("show");
-    document.getElementById("binsHint").textContent = "Select a piece above, then tap a bin";
-    setBinsActive(false);
-    document.getElementById("gameBody").scrollTop = 0;
-
-    // items with no disassembly show components immediately
-    if (!item.disassemble) {
-      renderComponents(item);
-      setBinsActive(true);
-    }
-  }
-
-  function doDisassemble() {
-    const item = gameItems[currentIdx];
-    document.getElementById("disassembleBtn").classList.add("hidden");
-    renderComponents(item);
+  if (!item.needs_disassembly) {
+    showComponents(item);
     setBinsActive(true);
-    setTimeout(() =>
-      document.getElementById("componentsZone")
-        .scrollIntoView({ behavior: "smooth", block: "nearest" }), 120);
   }
+}
 
-  function renderComponents(item) {
-    const zone = document.getElementById("componentsZone");
-    const list = document.getElementById("componentsList");
-    document.getElementById("zoneLabel").textContent =
-      item.components.length === 1 ? "Sort this item" : "Sort each piece";
+/* ══════════════════════════════════════════════════════════════
+   SCATTER / SPLIT ANIMATION
+   ══════════════════════════════════════════════════════════════
 
-    list.innerHTML = item.components.map(c => `
-      <div class="component-chip" id="chip-${c.id}" data-id="${c.id}">
-        <div class="chip-emoji">${c.emoji}</div>
-        <div class="chip-text">
-          <div class="chip-name">${c.name}</div>
-          <div class="chip-hint">${c.hint}</div>
-        </div>
-        <div class="chip-status" id="status-${c.id}"></div>
-      </div>`).join("");
+   When the user taps the item card:
+   1. N text fragments (one per component) are spawned over the
+      item-name element, all showing the item name text.
+   2. Each fragment flies outward in a fan spread above the card,
+      shrinking and fading as it goes.
+   3. The card collapses to zero height.
+   4. Component chips slide up into view with a staggered delay.
 
-    // attach click listeners
-    list.querySelectorAll(".component-chip").forEach(chip => {
-      chip.addEventListener("click", () => selectComponent(Number(chip.dataset.id)));
+   ══════════════════════════════════════════════════════════════ */
+function triggerSplit() {
+  if (splitting) return;   // prevent double-fire
+  splitting = true;
+
+  const item    = gameItems[currentIdx];
+  const card    = $("itemCard");
+  const nameEl  = $("itemName");
+  const n       = item.components.length;
+
+  /* measure the centre of the item name in viewport coords */
+  const r  = nameEl.getBoundingClientRect();
+  const cx = r.left + r.width  / 2;
+  const cy = r.top  + r.height / 2;
+
+  /* ── 1. Spawn scatter fragments ── */
+  /*
+     Fan spread: distribute N fragments across an arc from
+     -150° to -30° (upper half, starting from upper-left to upper-right).
+     -90° is straight up. Randomise distance slightly per fragment.
+  */
+  const arcStart = -150;
+  const arcEnd   = -30;
+
+  for (let i = 0; i < n; i++) {
+    const degFraction = n === 1 ? 0.5 : i / (n - 1);
+    const deg  = arcStart + degFraction * (arcEnd - arcStart);
+    const rad  = deg * (Math.PI / 180);
+    const dist = 90 + i * 18;           // stagger distance so they don't all land at same point
+
+    const tx = Math.cos(rad) * dist;   // viewport-relative displacement
+    const ty = Math.sin(rad) * dist;
+
+    const frag = document.createElement("span");
+    frag.className   = "scatter-frag";
+    frag.textContent = item.name;
+    /* start exactly centred over the item name */
+    frag.style.left  = cx + "px";
+    frag.style.top   = cy + "px";
+    frag.style.fontSize = Math.max(13, 20 - n * 1.5) + "px"; // smaller text for more fragments
+    document.body.appendChild(frag);
+
+    /* kick off the fly-out on the next paint so the initial position is rendered first */
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        frag.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(0.28) rotate(${(i - (n-1)/2) * 12}deg)`;
+        frag.style.opacity   = "0";
+        frag.style.filter    = "blur(3px)";
+      });
     });
 
-    zone.classList.remove("hidden");
+    /* clean up after the CSS transition finishes */
+    setTimeout(() => frag.remove(), 700);
   }
 
-  function selectComponent(compId) {
-    if (sortedMap[compId] !== undefined) return; // already sorted
+  /* ── 2. Collapse the card ── */
+  /*
+     Lock the card's current height explicitly so the CSS transition
+     has a concrete start value, then set height → 0.
+  */
+  card.style.height  = card.offsetHeight + "px";
+  card.onclick       = null;   // prevent re-tap during animation
 
-    // deselect previous
-    if (selectedCompId && selectedCompId !== compId) {
-      document.getElementById("chip-" + selectedCompId)?.classList.remove("selected");
-    }
-    selectedCompId = compId;
-    document.getElementById("chip-" + compId).classList.add("selected");
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      card.classList.add("dissolving");
+    });
+  });
 
-    const comp = gameItems[currentIdx].components.find(c => c.id === compId);
-    document.getElementById("binsHint").textContent = `Tap the bin for "${comp.name}"`;
+  /* ── 3. Reveal components after the card has mostly collapsed ── */
+  setTimeout(() => {
+    card.classList.add("hidden");   // fully remove from layout
+    showComponents(item);
+    setBinsActive(true);
+    /* scroll the component zone into view smoothly */
+    setTimeout(() => {
+      $("componentsZone").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 80);
+  }, 360);
+}
+
+/* ── Render component chips ─────────────────────────────────── */
+function showComponents(item) {
+  $("zoneLabel").textContent = item.components.length > 1 ? "Sort each piece" : "Sort this item";
+
+  /*
+     Each chip gets a CSS custom property --i for its staggered
+     entrance animation delay (defined in style.css as chipArrive).
+  */
+  $("componentsList").innerHTML = item.components.map((c, i) => `
+    <div class="component-chip"
+         id="chip-${c.id}"
+         style="--i:${i}"
+         onclick="selectComponent(${c.id})">
+      <div class="chip-bar"></div>
+      <div class="chip-text">
+        <div class="chip-name">${c.name}</div>
+      </div>
+      <div class="chip-badge" id="badge-${c.id}"></div>
+    </div>
+  `).join("");
+
+  $("componentsZone").classList.remove("hidden");
+}
+
+/* ── Select a chip ───────────────────────────────────────────── */
+function selectComponent(id) {
+  const item = gameItems[currentIdx];
+  if (sortedMap[id] !== undefined) return;
+
+  if (selectedCompId !== null && selectedCompId !== id) {
+    $("chip-" + selectedCompId)?.classList.remove("selected");
   }
 
-  async function sortSelected(binChoice) {
-    if (!selectedCompId) {
-      // nudge bins
-      document.querySelectorAll(".bin-btn").forEach(b => {
-        b.classList.add("pulse");
-        setTimeout(() => b.classList.remove("pulse"), 300);
-      });
-      document.getElementById("binsHint").textContent = "Select a piece above first!";
-      return;
-    }
+  selectedCompId = id;
+  $("chip-" + id).classList.add("selected");
 
-    const compId = selectedCompId;
-    selectedCompId = null;
+  const comp = item.components.find(c => c.id === id);
+  $("binsHint").textContent = `Now tap the bin for \u201c${comp.name}\u201d`;
+}
 
-    // post to Flask
-    let result;
-    try {
-      const res = await fetch("/api/sort", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ component_id: compId, chosen_bin: binChoice }),
-      });
-      result = await res.json();
-    } catch (e) {
-      showToast("Network error — check Flask is running.");
-      return;
-    }
+/* ── Sort selected chip into a bin ──────────────────────────── */
+function sortSelected(binChoice) {
+  if (selectedCompId === null) {
+    document.querySelectorAll(".bin-btn").forEach(b => {
+      b.classList.add("pulse");
+      setTimeout(() => b.classList.remove("pulse"), 280);
+    });
+    $("binsHint").textContent = "Select a piece above first!";
+    return;
+  }
 
-    // update chip
-    const chip = document.getElementById("chip-" + compId);
-    chip.classList.remove("selected");
-    chip.classList.add("sorted-" + binChoice);
-    chip.onclick = null;
+  const item = gameItems[currentIdx];
+  const comp = item.components.find(c => c.id === selectedCompId);
+  if (!comp) return;
 
-    const labels = { recycle: "Recycle", trash: "Trash", compost: "Compost" };
-    document.getElementById("status-" + compId).textContent = labels[binChoice];
+  const correct = binChoice === comp.bin;
+  sortedMap[selectedCompId] = binChoice;
 
-    // scoring
-    totalParts++;
-    const correctBin = result.correct_bin;
-    catStats[correctBin].t++;
-    if (result.correct) {
-      correctParts++;
-      catStats[correctBin].c++;
-      score++;
-    } else {
-      chip.classList.add("wrong-flash");
-      setTimeout(() => chip.classList.remove("wrong-flash"), 500);
-    }
+  const chip = $("chip-" + selectedCompId);
+  chip.classList.remove("selected");
+  chip.classList.add("sorted-" + binChoice);
+  chip.onclick = null;
 
-    sortedMap[compId] = binChoice;
-    document.getElementById("scoreNum").textContent = score;
-    document.getElementById("binsHint").textContent = "Select a piece above, then tap a bin";
+  const labels = { recycle: "Recycle", trash: "Trash", compost: "Compost" };
+  $("badge-" + selectedCompId).textContent = labels[binChoice];
 
-    // pulse chosen bin
-    const binEl = document.querySelector(`.bin-btn[data-bin="${binChoice}"]`);
+  totalParts++;
+  catStats[comp.bin].t++;
+  if (correct) {
+    correctParts++;
+    catStats[comp.bin].c++;
+    score++;
+  } else {
+    chip.classList.add("wrong-flash");
+    setTimeout(() => chip.classList.remove("wrong-flash"), 520);
+  }
+
+  $("scoreNum").textContent = score;
+  selectedCompId            = null;
+  $("binsHint").textContent = "Select a piece above, then tap a bin";
+
+  const binEl = document.querySelector(".bin-btn." + binChoice);
+  if (binEl) {
     binEl.classList.add("pulse");
-    setTimeout(() => binEl.classList.remove("pulse"), 300);
-
-    // check if all done
-    const item  = gameItems[currentIdx];
-    const allDone = item.components.every(c => sortedMap[c.id] !== undefined);
-    if (allDone) {
-      setBinsActive(false);
-      showItemFeedback(item);
-    }
+    setTimeout(() => binEl.classList.remove("pulse"), 280);
   }
 
-  function showItemFeedback(item) {
-    const wrong  = item.components.filter(c => sortedMap[c.id] !== c.correct_bin);
-    const banner = document.getElementById("feedbackBanner");
+  /* check all sorted */
+  if (item.components.every(c => sortedMap[c.id] !== undefined)) {
+    setBinsActive(false);
+    showItemFeedback(item);
+  }
+}
 
-    if (wrong.length === 0) {
-      banner.className = "feedback-banner correct show";
-      banner.innerHTML = "<strong>Perfect!</strong>";
-    } else {
-      const fixes = wrong.map(c => {
-        const l = { recycle: "Recycling", trash: "Trash", compost: "Compost" }[c.correct_bin];
-        return `<strong>${c.name}</strong> → ${l}`;
-      }).join("<br>");
-      banner.className = "feedback-banner wrong show";
-      banner.innerHTML  = "Almost! Here's the fix:<br>" + fixes;
-    }
+/* ── Item feedback ───────────────────────────────────────────── */
+function showItemFeedback(item) {
+  const wrong  = item.components.filter(c => sortedMap[c.id] !== c.bin);
+  const banner = $("feedbackBanner");
+  const labels = { recycle: "Recycling", trash: "Trash", compost: "Compost" };
 
-    const nb = document.getElementById("nextBtn");
-    nb.textContent = currentIdx >= 9 ? "See Results" : "Next Item →";
-    nb.classList.add("show");
-    setTimeout(() => banner.scrollIntoView({ behavior: "smooth", block: "nearest" }), 120);
+  if (wrong.length === 0) {
+    banner.className = "feedback-banner correct show";
+    banner.innerHTML = "<strong>All correct!</strong> Every piece went to the right bin.";
+  } else {
+    const fixes = wrong.map(c => `<strong>${c.name}</strong> &rarr; ${labels[c.bin]}`).join(" &middot; ");
+    banner.className = "feedback-banner wrong show";
+    banner.innerHTML = `<strong>Almost!</strong> ${fixes}`;
   }
 
-  function hideFeedback() {
-    const b = document.getElementById("feedbackBanner");
-    b.className = "feedback-banner";
-    b.innerHTML = "";
-  }
+  const nb = $("nextBtn");
+  nb.textContent = currentIdx >= 9 ? "See My Results" : "Next Item";
+  nb.classList.add("show");
 
-  async function nextItem() {
-    currentIdx++;
-    if (currentIdx >= 10) {
-      await showResults();
-      return;
-    }
-    loadItem();
-    document.getElementById("gameBody").scrollTop = 0;
-  }
+  setTimeout(() => banner.scrollIntoView({ behavior: "smooth", block: "nearest" }), 100);
+}
 
-  // ══════════════════════════════════════════════════════
-  // RESULTS — pull from /api/stats
-  // ══════════════════════════════════════════════════════
-  async function showResults() {
-    document.getElementById("progressFill").style.width = "100%";
+/* ── Next item ───────────────────────────────────────────────── */
+function nextItem() {
+  currentIdx++;
+  if (currentIdx >= 10) { showResults(); return; }
+  loadItem();
+  $("gameBody").scrollTop = 0;
+}
 
-    let stats;
-    try {
-      const res = await fetch("/api/stats");
-      stats = await res.json();
-    } catch (e) {
-      stats = null;
-    }
+/* ── Results ─────────────────────────────────────────────────── */
+function showResults() {
+  $("progressFill").style.width = "100%";
 
-    const pct = stats ? stats.accuracy_pct : Math.round((correctParts / Math.max(totalParts,1)) * 100);
+  const pct  = Math.round((correctParts / Math.max(totalParts, 1)) * 100);
+  const tiers = [
+    { min:100, grade:"Perfect",    title:"Flawless Sorter!"          },
+    { min: 80, grade:"Excellent",  title:"Great Job!"                },
+    { min: 60, grade:"Good",       title:"Getting There!"            },
+    { min: 40, grade:"Fair",       title:"Keep Practicing!"          },
+    { min:  0, grade:"Keep At It", title:"Everyone Starts Somewhere." },
+  ];
+  const tier = tiers.find(t => pct >= t.min);
 
-    const titles = ["Keep Learning!","Keep Learning!","Good Effort!","Getting There!","Great Job!","Perfect Sorter!"];
-    const tier   = Math.min(5, Math.floor(pct / 20));
+  $("resultsGrade").textContent = tier.grade;
+  $("resultsTitle").textContent = tier.title;
+  $("resultsScore").textContent = correctParts;
+  $("resultsOf").textContent    = `out of ${totalParts} pieces sorted correctly`;
 
-    document.getElementById("resultsIcon").textContent  = tiers[tier];
-    document.getElementById("resultsTitle").textContent = titles[tier];
-    document.getElementById("resultsScore").textContent = correctParts;
-    document.getElementById("resultsOf").textContent    = `out of ${totalParts} pieces sorted correctly`;
+  const fmt = k => catStats[k].t > 0 ? `${catStats[k].c} / ${catStats[k].t}` : "—";
+  $("brRecycle").textContent = fmt("recycle");
+  $("brTrash").textContent   = fmt("trash");
+  $("brCompost").textContent = fmt("compost");
 
-    const fmt = k => catStats[k].t ? `${catStats[k].c}/${catStats[k].t}` : "—";
-    document.getElementById("brRecycle").textContent = fmt("recycle");
-    document.getElementById("brTrash").textContent   = fmt("trash");
-    document.getElementById("brCompost").textContent = fmt("compost");
-
-    showScreen("results");
-  }
-
-  // ══════════════════════════════════════════════════════
-  // UTILS
-  // ══════════════════════════════════════════════════════
-  function showScreen(id) {
-    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
-    document.getElementById("screen-" + id).classList.add("active");
-    window.scrollTo(0, 0);
-  }
-
-  function setBinsActive(on) {
-    document.querySelectorAll(".bin-btn").forEach(b => b.classList.toggle("inactive", !on));
-  }
-
-  function showToast(msg) {
-    const t = document.getElementById("toast");
-    t.textContent = msg;
-    t.classList.remove("hidden");
-    setTimeout(() => t.classList.add("hidden"), 3500);
-  }
-  </script>
+  showScreen("results");
+}
+</script>
 </body>
 </html>

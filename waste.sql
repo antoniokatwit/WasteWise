@@ -1,110 +1,111 @@
--- ============================================================
--- WasteWise Database Schema + Seed Data (CLEANED)
--- ============================================================
+-- WasteWise database schema and seed data
+-- Run via app.py on first launch (auto-detected)
 
-DROP TABLE IF EXISTS sort_attempts;
 DROP TABLE IF EXISTS components;
 DROP TABLE IF EXISTS items;
 
--- ── ITEMS ──────────────────────────────────────────────────
 CREATE TABLE items (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    name          TEXT    NOT NULL,
-    description   TEXT    NOT NULL,
-    disassemble   INTEGER NOT NULL DEFAULT 1,
-    btn_label     TEXT    NOT NULL DEFAULT 'Take it apart'
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    name              TEXT    NOT NULL,
+    description       TEXT    NOT NULL,
+    needs_disassembly INTEGER NOT NULL DEFAULT 0,  -- 0 = sort as-is, 1 = take apart first
+    disassemble_label TEXT                          -- button label shown to user
 );
 
--- ── COMPONENTS ─────────────────────────────────────────────
 CREATE TABLE components (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    item_id     INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
-    slug        TEXT    NOT NULL,
-    name        TEXT    NOT NULL,
-    correct_bin TEXT    NOT NULL CHECK(correct_bin IN ('recycle','trash','compost'))
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_id    INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    name       TEXT    NOT NULL,
+    bin        TEXT    NOT NULL CHECK(bin IN ('recycle', 'trash', 'compost')),
+    sort_order INTEGER NOT NULL DEFAULT 0           -- display order within item
 );
 
--- ── SORT_ATTEMPTS ──────────────────────────────────────────
-CREATE TABLE sort_attempts (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_id    TEXT    NOT NULL,
-    component_id  INTEGER NOT NULL REFERENCES components(id),
-    chosen_bin    TEXT    NOT NULL CHECK(chosen_bin IN ('recycle','trash','compost')),
-    is_correct    INTEGER NOT NULL,
-    attempted_at  TEXT    NOT NULL DEFAULT (datetime('now'))
-);
+-- ── Items ─────────────────────────────────────────────────────────────────────
 
-CREATE INDEX idx_attempts_session ON sort_attempts(session_id);
+INSERT INTO items (name, description, needs_disassembly, disassemble_label) VALUES
+  ('Coffee Cup and Lid',
+   'A paper coffee cup with a plastic lid and a cardboard sleeve — three different materials.',
+   1, 'Take It Apart'),
 
--- ============================================================
--- SEED — 14 items
--- ============================================================
+  ('Pizza Box with Leftover Crust',
+   'A cardboard pizza box with a greasy bottom half and a leftover crust inside.',
+   1, 'Take It Apart'),
 
-INSERT INTO items (name, description, disassemble, btn_label) VALUES
-('Starbucks Plastic Cup',    'A cold-drink Starbucks cup — clear plastic body, plastic lid, and a green plastic straw.', 1, 'Take it apart'),
-('Plastic Soda Bottle',      'An empty plastic soda bottle with the cap still on.', 1, 'Prep it'),
-('Yogurt Cup',               'A plastic yogurt cup with a peelable foil lid and leftover yogurt inside.', 1, 'Peel the lid & scrape'),
-('Banana with Sticker',      'A banana peel with a tiny PLU produce sticker stuck on it.', 1, 'Peel off the sticker'),
-('Orange Peels with Sticker','Orange peels with a produce sticker still on the skin.', 1, 'Peel off the sticker'),
-('Chip Bag',                 'An empty potato chip bag — shiny, crinkly, and multilayer.', 0, ''),
-('Paper',                    'A clean, dry sheet of office paper — no food stains or grease.', 0, ''),
-('Paper Towel',              'A used paper towel from wiping up a spill.', 0, ''),
-('Plastic Bag',              'A thin single-use plastic shopping bag.', 0, ''),
-('Ziploc Bag',               'A Ziploc bag with leftover food crumbs inside.', 1, 'Empty the crumbs'),
-('Glass Bottle',             'An empty glass beverage bottle — rinsed clean.', 0, ''),
-('Aluminum Can',             'An empty aluminum soda or food can.', 0, ''),
-('Candy Wrapper',            'A shiny candy or chocolate bar wrapper.', 0, ''),
-('Bones',                    'Leftover chicken or beef bones from a meal.', 0, '');
+  ('Plastic Cup and Paper Straw',
+   'A clear plastic drink cup paired with a paper straw.',
+   1, 'Separate the Straw'),
 
--- ── COMPONENTS ─────────────────────────────────────────────
+  ('Takeout Container with Food',
+   'A plastic clamshell container with leftover noodles inside.',
+   1, 'Remove the Food'),
 
-INSERT INTO components (item_id, slug, name, correct_bin) VALUES
--- 1
-(1, 'straw', 'Plastic straw', 'trash'),
-(1, 'lid',   'Plastic lid', 'trash'),
-(1, 'cup',   'Clear plastic cup', 'recycle'),
+  ('Banana with Produce Sticker',
+   'A banana peel with a small plastic PLU sticker attached.',
+   1, 'Peel Off the Sticker'),
 
--- 2
-(2, 'bottle', 'Rinsed plastic bottle', 'recycle'),
-(2, 'liquid', 'Any remaining liquid', 'compost'),
+  ('Dry Newspaper',
+   'A clean, dry newspaper with no food stains or moisture.',
+   0, NULL),
 
--- 3
-(3, 'yogurt', 'Leftover yogurt', 'compost'),
-(3, 'foil',   'Foil lid (rinsed)', 'recycle'),
-(3, 'cup',    'Rinsed plastic cup', 'recycle'),
+  ('Salad Container and Plastic Fork',
+   'A clear plastic salad container with leftover dressing and a disposable fork.',
+   1, 'Separate the Parts'),
 
--- 4
-(4, 'sticker', 'Produce sticker', 'trash'),
-(4, 'peel',    'Banana peel', 'compost'),
+  ('Cardboard Box with Packing Tape',
+   'A shipping box with plastic packing tape strips still attached.',
+   1, 'Remove the Tape'),
 
--- 5
-(5, 'sticker', 'Produce sticker', 'trash'),
-(5, 'peels',   'Orange peels', 'compost'),
+  ('Apple Core in a Paper Bag',
+   'An apple core sitting inside a clean paper lunch bag.',
+   1, 'Remove the Apple'),
 
--- 6
-(6, 'bag', 'Chip bag', 'trash'),
+  ('Yogurt Cup with Foil Lid',
+   'A plastic yogurt cup with a peelable foil lid and leftover yogurt inside.',
+   1, 'Peel the Lid and Scrape');
 
--- 7
-(7, 'paper', 'Clean sheet of paper', 'recycle'),
+-- ── Components ────────────────────────────────────────────────────────────────
+-- item_id values match the insertion order of the items above (1–10)
 
--- 8
-(8, 'towel', 'Used paper towel', 'trash'),
+INSERT INTO components (item_id, name, bin, sort_order) VALUES
+  -- 1. Coffee Cup and Lid
+  (1, 'Plastic Lid',              'trash',   1),
+  (1, 'Cardboard Sleeve',         'recycle', 2),
+  (1, 'Paper Cup Body',           'trash',   3),
 
--- 9
-(9, 'bag', 'Plastic shopping bag', 'trash'),
+  -- 2. Pizza Box with Leftover Crust
+  (2, 'Leftover Crust',           'compost', 1),
+  (2, 'Clean Box Top Half',       'recycle', 2),
+  (2, 'Greasy Box Bottom Half',   'trash',   3),
 
--- 10
-(10, 'crumbs', 'Food crumbs inside', 'compost'),
-(10, 'bag',    'Empty Ziploc bag', 'trash'),
+  -- 3. Plastic Cup and Paper Straw
+  (3, 'Clear Plastic Cup',        'recycle', 1),
+  (3, 'Paper Straw',              'compost', 2),
 
--- 11
-(11, 'bottle', 'Glass bottle', 'recycle'),
+  -- 4. Takeout Container with Food
+  (4, 'Leftover Noodles',         'compost', 1),
+  (4, 'Rinsed Plastic Clamshell', 'recycle', 2),
 
--- 12
-(12, 'can', 'Aluminum can', 'recycle'),
+  -- 5. Banana with Produce Sticker
+  (5, 'Plastic Produce Sticker',  'trash',   1),
+  (5, 'Banana Peel',              'compost', 2),
 
--- 13
-(13, 'wrapper', 'Candy wrapper', 'trash'),
+  -- 6. Dry Newspaper
+  (6, 'Dry Newspaper',            'recycle', 1),
 
--- 14
-(14, 'bones', 'Bones', 'trash');
+  -- 7. Salad Container and Plastic Fork
+  (7, 'Leftover Dressing',        'compost', 1),
+  (7, 'Plastic Fork',             'trash',   2),
+  (7, 'Rinsed Plastic Container', 'recycle', 3),
+
+  -- 8. Cardboard Box with Packing Tape
+  (8, 'Plastic Packing Tape',     'trash',   1),
+  (8, 'Flattened Cardboard',      'recycle', 2),
+
+  -- 9. Apple Core in a Paper Bag
+  (9, 'Apple Core',               'compost', 1),
+  (9, 'Clean Paper Bag',          'recycle', 2),
+
+  -- 10. Yogurt Cup with Foil Lid
+  (10, 'Leftover Yogurt',         'compost', 1),
+  (10, 'Foil Lid',                'recycle', 2),
+  (10, 'Plastic Cup',             'recycle', 3);
