@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1a3d2b">
+  <title>WasteWise — Sort It Right</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,800;1,9..144,400&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════
+       START SCREEN
+  ══════════════════════════════════════════ -->
+  <div id="screen-start" class="screen active">
+    <div class="logo">Waste<span>Wise</span></div>
+    <p class="tagline">Take it apart. Sort it right.</p>
+
+    <div class="bin-preview">
+      <div class="bp recycle">
+        <div class="bp-label">Recycle</div>
+      </div>
+      <div class="bp trash">
+        <div class="bp-label">Trash</div>
+      </div>
+      <div class="bp compost">
+        <div class="bp-label">Compost</div>
+      </div>
+    </div>
+
+    <button class="start-btn" id="startBtn">Let's Sort! →</button>
+    <p class="start-note" id="startNote">Loading items…</p>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       GAME SCREEN
+  ══════════════════════════════════════════ -->
+  <div id="screen-game" class="screen">
+    <!-- Top bar -->
+    <div class="topbar">
+      <div class="topbar-logo">Waste<span>Wise</span></div>
+      <div class="topbar-right">
+        <div class="topbar-progress-label" id="progressLabel">1 / 10</div>
+        <div class="topbar-score">Score <span id="scoreNum">0</span></div>
+      </div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-fill" id="progressFill" style="width:10%"></div>
+    </div>
+
+    <!-- Scrollable game body -->
+    <div class="game-body" id="gameBody">
+
+      <!-- Item card -->
+      <div class="item-card">
+        <div class="item-emoji" id="itemEmoji"></div>
+        <div class="item-name"  id="itemName"></div>
+        <div class="item-desc"  id="itemDesc"></div>
+        <button class="disassemble-btn hidden" id="disassembleBtn"></button>
+      </div>
+
+      <!-- Components to sort -->
+      <div class="components-zone hidden" id="componentsZone">
+        <div class="zone-label" id="zoneLabel">Sort each piece</div>
+        <div id="componentsList"></div>
+      </div>
+
+      <!-- Feedback -->
+      <div class="feedback-banner" id="feedbackBanner"></div>
+      <button class="next-btn" id="nextBtn"></button>
+    </div>
+
+    <!-- Bin buttons (sticky bottom) -->
+    <div class="bins-area">
+      <div class="bins-hint" id="binsHint">Select a piece above, then tap a bin</div>
+      <div class="bins-row">
+        <button class="bin-btn recycle" data-bin="recycle">
+          <span class="bin-name">Recycle</span>
+        </button>
+        <button class="bin-btn trash" data-bin="trash">
+          <span class="bin-name">Trash</span>
+        </button>
+        <button class="bin-btn compost" data-bin="compost">
+          <span class="bin-name">Compost</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       RESULTS SCREEN
+  ══════════════════════════════════════════ -->
+  <div id="screen-results" class="screen">
+    <div class="results-icon"  id="resultsIcon"></div>
+    <div class="results-title" id="resultsTitle"></div>
+    <div class="results-score" id="resultsScore"></div>
+    <div class="results-of"    id="resultsOf"></div>
+
+    <div class="results-breakdown">
+      <div class="breakdown-title">Breakdown by bin</div>
+      <div class="breakdown-row">
+        <span class="bl">Recycle</span>
+        <span class="br" id="brRecycle">—</span>
+      </div>
+      <div class="breakdown-row">
+        <span class="bl">Trash</span>
+        <span class="br" id="brTrash">—</span>
+      </div>
+      <div class="breakdown-row">
+        <span class="bl">Compost</span>
+        <span class="br" id="brCompost">—</span>
+      </div>
+    </div>
+
+    <button class="play-again-btn" id="playAgainBtn">Play Again</button>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       ERROR TOAST
+  ══════════════════════════════════════════ -->
+  <div class="toast hidden" id="toast"></div>
+
+  <script>
+  // ══════════════════════════════════════════════════════
+  // STATE
+  // ══════════════════════════════════════════════════════
+  let allItems       = [];   // full item list from /api/items
+  let gameItems      = [];   // 10 shuffled items for this round
+  let currentIdx     = 0;
+  let selectedCompId = null; // DB id of selected component chip
+  let sortedMap      = {};   // { component_id: 'recycle'|'trash'|'compost' }
+  let score          = 0;
+  let totalParts     = 0;
+  let correctParts   = 0;
+  let catStats       = { recycle:{c:0,t:0}, trash:{c:0,t:0}, compost:{c:0,t:0} };
+
+  // ══════════════════════════════════════════════════════
+  // BOOT — fetch items, then wire up UI
+  // ══════════════════════════════════════════════════════
+  document.addEventListener("DOMContentLoaded", async () => {
+    try {
+      const res  = await fetch("/api/items");
+      allItems   = await res.json();
+      document.getElementById("startNote").textContent =
+        allItems.length + " items · disassemble · sort each piece";
+    } catch (e) {
+      showToast("⚠️ Could not load items. Is Flask running?");
+    }
+
+    document.getElementById("startBtn").addEventListener("click", startGame);
+    document.getElementById("playAgainBtn").addEventListener("click", startGame);
+    document.getElementById("disassembleBtn").addEventListener("click", doDisassemble);
+    document.getElementById("nextBtn").addEventListener("click", nextItem);
+    document.querySelectorAll(".bin-btn").forEach(btn =>
+      btn.addEventListener("click", () => sortSelected(btn.dataset.bin))
+    );
+  });
+
+  // ══════════════════════════════════════════════════════
+  // GAME FLOW
+  // ══════════════════════════════════════════════════════
+  function shuffle(arr) { return [...arr].sort(() => Math.random() - 0.5); }
+
+  function startGame() {
+    gameItems    = shuffle(allItems).slice(0, 10);
+    currentIdx   = 0;
+    score        = 0;
+    totalParts   = 0;
+    correctParts = 0;
+    catStats     = { recycle:{c:0,t:0}, trash:{c:0,t:0}, compost:{c:0,t:0} };
+    showScreen("game");
+    loadItem();
+  }
+
+  function loadItem() {
+    const item       = gameItems[currentIdx];
+    selectedCompId   = null;
+    sortedMap        = {};
+
+    // progress bar
+    const pct = Math.round((currentIdx / 10) * 100) + 10;
+    document.getElementById("progressFill").style.width = pct + "%";
+    document.getElementById("progressLabel").textContent = (currentIdx + 1) + " / 10";
+    document.getElementById("scoreNum").textContent = score;
+
+    // item card
+    document.getElementById("itemEmoji").textContent = item.emoji;
+    document.getElementById("itemName").textContent  = item.name;
+    document.getElementById("itemDesc").textContent  = item.description;
+
+    const btn = document.getElementById("disassembleBtn");
+    if (item.disassemble) {
+      btn.classList.remove("hidden");
+      btn.textContent = item.btn_label;
+    } else {
+      btn.classList.add("hidden");
+    }
+
+    // reset UI
+    document.getElementById("componentsZone").classList.add("hidden");
+    document.getElementById("componentsList").innerHTML = "";
+    hideFeedback();
+    document.getElementById("nextBtn").classList.remove("show");
+    document.getElementById("binsHint").textContent = "Select a piece above, then tap a bin";
+    setBinsActive(false);
+    document.getElementById("gameBody").scrollTop = 0;
+
+    // items with no disassembly show components immediately
+    if (!item.disassemble) {
+      renderComponents(item);
+      setBinsActive(true);
+    }
+  }
+
+  function doDisassemble() {
+    const item = gameItems[currentIdx];
+    document.getElementById("disassembleBtn").classList.add("hidden");
+    renderComponents(item);
+    setBinsActive(true);
+    setTimeout(() =>
+      document.getElementById("componentsZone")
+        .scrollIntoView({ behavior: "smooth", block: "nearest" }), 120);
+  }
+
+  function renderComponents(item) {
+    const zone = document.getElementById("componentsZone");
+    const list = document.getElementById("componentsList");
+    document.getElementById("zoneLabel").textContent =
+      item.components.length === 1 ? "Sort this item" : "Sort each piece";
+
+    list.innerHTML = item.components.map(c => `
+      <div class="component-chip" id="chip-${c.id}" data-id="${c.id}">
+        <div class="chip-emoji">${c.emoji}</div>
+        <div class="chip-text">
+          <div class="chip-name">${c.name}</div>
+          <div class="chip-hint">${c.hint}</div>
+        </div>
+        <div class="chip-status" id="status-${c.id}"></div>
+      </div>`).join("");
+
+    // attach click listeners
+    list.querySelectorAll(".component-chip").forEach(chip => {
+      chip.addEventListener("click", () => selectComponent(Number(chip.dataset.id)));
+    });
+
+    zone.classList.remove("hidden");
+  }
+
+  function selectComponent(compId) {
+    if (sortedMap[compId] !== undefined) return; // already sorted
+
+    // deselect previous
+    if (selectedCompId && selectedCompId !== compId) {
+      document.getElementById("chip-" + selectedCompId)?.classList.remove("selected");
+    }
+    selectedCompId = compId;
+    document.getElementById("chip-" + compId).classList.add("selected");
+
+    const comp = gameItems[currentIdx].components.find(c => c.id === compId);
+    document.getElementById("binsHint").textContent = `Tap the bin for "${comp.name}"`;
+  }
+
+  async function sortSelected(binChoice) {
+    if (!selectedCompId) {
+      // nudge bins
+      document.querySelectorAll(".bin-btn").forEach(b => {
+        b.classList.add("pulse");
+        setTimeout(() => b.classList.remove("pulse"), 300);
+      });
+      document.getElementById("binsHint").textContent = "Select a piece above first!";
+      return;
+    }
+
+    const compId = selectedCompId;
+    selectedCompId = null;
+
+    // post to Flask
+    let result;
+    try {
+      const res = await fetch("/api/sort", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ component_id: compId, chosen_bin: binChoice }),
+      });
+      result = await res.json();
+    } catch (e) {
+      showToast("Network error — check Flask is running.");
+      return;
+    }
+
+    // update chip
+    const chip = document.getElementById("chip-" + compId);
+    chip.classList.remove("selected");
+    chip.classList.add("sorted-" + binChoice);
+    chip.onclick = null;
+
+    const labels = { recycle: "Recycle", trash: "Trash", compost: "Compost" };
+    document.getElementById("status-" + compId).textContent = labels[binChoice];
+
+    // scoring
+    totalParts++;
+    const correctBin = result.correct_bin;
+    catStats[correctBin].t++;
+    if (result.correct) {
+      correctParts++;
+      catStats[correctBin].c++;
+      score++;
+    } else {
+      chip.classList.add("wrong-flash");
+      setTimeout(() => chip.classList.remove("wrong-flash"), 500);
+    }
+
+    sortedMap[compId] = binChoice;
+    document.getElementById("scoreNum").textContent = score;
+    document.getElementById("binsHint").textContent = "Select a piece above, then tap a bin";
+
+    // pulse chosen bin
+    const binEl = document.querySelector(`.bin-btn[data-bin="${binChoice}"]`);
+    binEl.classList.add("pulse");
+    setTimeout(() => binEl.classList.remove("pulse"), 300);
+
+    // check if all done
+    const item  = gameItems[currentIdx];
+    const allDone = item.components.every(c => sortedMap[c.id] !== undefined);
+    if (allDone) {
+      setBinsActive(false);
+      showItemFeedback(item);
+    }
+  }
+
+  function showItemFeedback(item) {
+    const wrong  = item.components.filter(c => sortedMap[c.id] !== c.correct_bin);
+    const banner = document.getElementById("feedbackBanner");
+
+    if (wrong.length === 0) {
+      banner.className = "feedback-banner correct show";
+      banner.innerHTML = "<strong>Perfect!</strong>";
+    } else {
+      const fixes = wrong.map(c => {
+        const l = { recycle: "Recycling", trash: "Trash", compost: "Compost" }[c.correct_bin];
+        return `<strong>${c.name}</strong> → ${l}`;
+      }).join("<br>");
+      banner.className = "feedback-banner wrong show";
+      banner.innerHTML  = "Almost! Here's the fix:<br>" + fixes;
+    }
+
+    const nb = document.getElementById("nextBtn");
+    nb.textContent = currentIdx >= 9 ? "See Results" : "Next Item →";
+    nb.classList.add("show");
+    setTimeout(() => banner.scrollIntoView({ behavior: "smooth", block: "nearest" }), 120);
+  }
+
+  function hideFeedback() {
+    const b = document.getElementById("feedbackBanner");
+    b.className = "feedback-banner";
+    b.innerHTML = "";
+  }
+
+  async function nextItem() {
+    currentIdx++;
+    if (currentIdx >= 10) {
+      await showResults();
+      return;
+    }
+    loadItem();
+    document.getElementById("gameBody").scrollTop = 0;
+  }
+
+  // ══════════════════════════════════════════════════════
+  // RESULTS — pull from /api/stats
+  // ══════════════════════════════════════════════════════
+  async function showResults() {
+    document.getElementById("progressFill").style.width = "100%";
+
+    let stats;
+    try {
+      const res = await fetch("/api/stats");
+      stats = await res.json();
+    } catch (e) {
+      stats = null;
+    }
+
+    const pct = stats ? stats.accuracy_pct : Math.round((correctParts / Math.max(totalParts,1)) * 100);
+
+    const titles = ["Keep Learning!","Keep Learning!","Good Effort!","Getting There!","Great Job!","Perfect Sorter!"];
+    const tier   = Math.min(5, Math.floor(pct / 20));
+
+    document.getElementById("resultsIcon").textContent  = tiers[tier];
+    document.getElementById("resultsTitle").textContent = titles[tier];
+    document.getElementById("resultsScore").textContent = correctParts;
+    document.getElementById("resultsOf").textContent    = `out of ${totalParts} pieces sorted correctly`;
+
+    const fmt = k => catStats[k].t ? `${catStats[k].c}/${catStats[k].t}` : "—";
+    document.getElementById("brRecycle").textContent = fmt("recycle");
+    document.getElementById("brTrash").textContent   = fmt("trash");
+    document.getElementById("brCompost").textContent = fmt("compost");
+
+    showScreen("results");
+  }
+
+  // ══════════════════════════════════════════════════════
+  // UTILS
+  // ══════════════════════════════════════════════════════
+  function showScreen(id) {
+    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+    document.getElementById("screen-" + id).classList.add("active");
+    window.scrollTo(0, 0);
+  }
+
+  function setBinsActive(on) {
+    document.querySelectorAll(".bin-btn").forEach(b => b.classList.toggle("inactive", !on));
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.remove("hidden");
+    setTimeout(() => t.classList.add("hidden"), 3500);
+  }
+  </script>
+</body>
+</html>
