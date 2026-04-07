@@ -219,7 +219,12 @@ function loadItem() {
   /* reset everything else */
   $("componentsZone").classList.add("hidden");
   $("componentsList").innerHTML = "";
-  $("feedbackBanner").className = "feedback-banner";
+
+  const banner = $("feedbackBanner");
+  banner.className   = "feedback-banner";
+  banner.innerHTML   = "";
+  banner.style.display = "none";   // force-hide regardless of CSS cascade
+
   $("nextBtn").classList.remove("show");
   $("binsHint").textContent = "Select a piece above, then tap a bin";
 
@@ -394,6 +399,7 @@ function showItemFeedback(item) {
   const banner = $("feedbackBanner");
   const labels = { recycle:"Recycling", trash:"Trash", compost:"Compost" };
 
+  banner.style.display = "";   // clear the force-hide set in loadItem
   if (wrong.length === 0) {
     banner.className = "feedback-banner correct show";
     banner.innerHTML = "<strong>All correct!</strong> Every piece went to the right bin.";
